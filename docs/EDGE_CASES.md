@@ -12,6 +12,7 @@ Each line: the case → how it's handled. ✅ = covered by an automated test, �
 - 🟢 Indian English names and course codes → Whisper prompt with KIT vocabulary.
 - 🟢 Unsupported audio type → 415.
 - 🟢 TTS provider down → Deepgram Aura → browser voice.
+- 🟢 Only one voice at a time: a new reply, a mic tap or Stop cancels the old audio, and a late error from the old audio can never start the browser voice (`lib/voicePlayer.ts`, tested).
 
 ## Understanding
 - ✅ Relative dates ("Monday", "tomorrow") → 14-day date table from the college date in the prompt; no LLM date maths.
