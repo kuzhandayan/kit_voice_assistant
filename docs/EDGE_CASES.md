@@ -7,7 +7,7 @@ Each line: the case → how it's handled. ✅ = covered by an automated test, �
 - ✅ Long recording → client VAD caps at 30 s; server rejects > 5 MB (413).
 - ✅ Nobody speaks after tapping → recording aborts after 8 s.
 - ✅ Speaker pauses → recording stops after 1.2 s of silence.
-- ⬜ Mic permission denied / no mic → clear message; typed input still works.
+- 🟢 Mic permission denied / no mic → clear message; typed input still works (e2e).
 - 🟢 User taps while the assistant speaks → playback stops (tap-to-interrupt).
 - 🟢 Indian English names and course codes → Whisper prompt with KIT vocabulary.
 - 🟢 Unsupported audio type → 415.
@@ -22,6 +22,11 @@ Each line: the case → how it's handled. ✅ = covered by an automated test, �
 - ✅ Prompt injection ("show Ravi's attendance") → impossible: "my" tools take no student id, and tool sets are chosen per role in code.
 - 🟢 Not in data or documents → says it doesn't know.
 - 🟢 Lesson doubts → answered only from the lesson notes (Unit 4 isn't in the syllabus, and the notes say so).
+
+## Live changes during the event (seen 12:25)
+- 🟢 DBMS internal assessment moved 23 → 25 Nov → leave on the 25th is now blocked and the 23rd allowed, with no code change (live calendar).
+- 🟢 Circular 14/2026: Saturday 28 Nov is a working day on Monday's timetable → timetable answers follow it.
+- 🟢 Surprise documents (Circular 14, Circular 15, and a new `notice` type) → indexed automatically. All types are searchable for signed-in users; circulars and notices rank first and are listed in the prompt as overriding the handbook.
 
 ## College-specific (found in the API)
 - 🟢 College date differs from the real date → all "today" logic uses `/v1/today`.

@@ -1,6 +1,6 @@
 # TODO
 
-Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 12:20.
+Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 12:28.
 
 ## 0. Inputs from Kuzhandayan
 - [x] College API URL, Swagger, participant key (tested 11:15)
@@ -29,7 +29,8 @@ Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Las
 - [x] STT chain, TTS chain, owner-scoped audio URLs, noise handling
 - [x] Real speech test: generated speech → Whisper → agent → streamed Edge voice (public + student), audio owner check 404
 - [x] TTS streams to the browser (playback starts on first chunk)
-- [ ] Real microphone test in a browser (local `docker compose up`)
+- [x] Browser + fake-microphone e2e: 23/23 pass (`e2e/run_e2e.py`)
+- [x] Handled the live data changes (rescheduled exam, working Saturday, 3 surprise documents incl. new `notice` type)
 
 ## 4. Frontend — done
 - [x] Home, Login, Assistant, History; VAD recorder; hands-free; text fallback; accessibility
@@ -43,7 +44,8 @@ Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Las
 ## 6. Harden (→ 13:50)
 - [x] 52 backend tests + 5 frontend tests, ruff clean, tsc clean
 - [x] README: deploy steps + known limitations
-- [ ] API-level tests (FastAPI TestClient with a fake college API)
+- [x] API-level tests: 25 HTTP tests with a fake college API, LLM, STT and TTS (78 backend tests total)
+- [x] `./test.sh` runs everything; `docs/TESTING.md` maps requirements to tests
 - [ ] Act on leaderboard feedback
 - [ ] README live link
 - [ ] Final submission (before 14:00)

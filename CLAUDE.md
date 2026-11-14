@@ -30,7 +30,7 @@ Max 3 submissions, latest counts. Never let a later submission be worse than an 
 - Public GitHub repo, single branch, < 10 MB, README with what + how to run.
 - "Things may change during the event" — keep endpoints, rules and knowledge files config-driven.
 
-## Status (12:20)
+## Status (12:28)
 Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026`. Waiting on: teacher login, Supabase password, GitHub push, Render deploy. See `docs/TODO.md`.
 
 ## Hard-won lessons (don't regress)
@@ -41,6 +41,8 @@ Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026
 - Never let the LLM confirm in the same turn it prepared; yes/no is handled in code.
 - Chrome's `scrollIntoView` returns a Promise → never return it from `useEffect`; and it scrolls the whole page, so scroll the transcript box with `scrollTop` instead.
 - SQLite drops timezones → API schemas force UTC (`UtcDatetime`).
+- The college data changes live (exam rescheduled, surprise circulars/notices) → never hardcode dates or document types.
+- Apple Silicon containers don't get `greenlet` with plain `sqlalchemy` → use `sqlalchemy[asyncio]`.
 
 ## Working rules
 - Code quality first: small modules, typed, one responsibility each, shared components over copy-paste.
@@ -67,8 +69,7 @@ Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026
 ```bash
 cp .env.example .env
 docker compose up --build                                   # http://localhost:5173, hot reload
-docker compose exec backend sh -c "ruff check app tests && pytest -q"
-docker compose exec frontend sh -c "npx tsc -b && npm test"
+./test.sh            # lint + all tests inside Docker; ./test.sh --e2e adds the browser + mic run
 ```
 
 ## Working copy / sync (Claude sessions)

@@ -6,11 +6,7 @@ from app.services.agent.guards import event_kind
 from app.services.agent.tools.base import EVERYONE, SIGNED_IN, ReadTool, ToolContext, arg_date, arg_str, schema
 from app.services.knowledge.base import Audience
 
-DOC_TYPES_BY_ROLE: dict[Role, set[str]] = {
-    Role.PUBLIC: {"brochure"},
-    Role.STUDENT: {"handbook", "circular", "lesson_notes", "brochure"},
-    Role.TEACHER: {"handbook", "circular", "lesson_notes"},
-}
+PUBLIC_DOC_TYPES = {"brochure"}
 
 
 def audience_for(ctx: ToolContext) -> Audience:
@@ -24,9 +20,10 @@ def audience_for(ctx: ToolContext) -> Audience:
 
 async def search_documents(ctx: ToolContext, args: dict[str, Any]) -> Any:
     query = arg_str(args, "query", max_len=200)
-    allowed = DOC_TYPES_BY_ROLE[ctx.principal.role]
+    available = {d.type for d in ctx.knowledge.documents}
+    allowed = PUBLIC_DOC_TYPES if ctx.principal.role is Role.PUBLIC else available or {"handbook"}
     wanted = args.get("source")
-    doc_types = {wanted} & allowed if wanted in allowed else allowed
+    doc_types = {wanted} if wanted in allowed else allowed
     chunks = await ctx.knowledge.search(query, doc_types=doc_types, audience=audience_for(ctx), limit=4)
     if not chunks:
         return {"found": False, "note": "Nothing relevant in the college documents. Say you don't know; do not guess."}
@@ -69,12 +66,12 @@ async def get_my_profile(ctx: ToolContext, _: dict[str, Any]) -> Any:
     return await ctx.college.me(ctx.token)
 
 
-SOURCES = ["handbook", "circular", "lesson_notes", "brochure"]
+SOURCES = ["handbook", "circular", "notice", "lesson_notes", "brochure"]
 
 COMMON_TOOLS = [
     ReadTool(
         "search_documents",
-        "Search official KIT documents (handbook rules, circulars, admissions brochure, lesson notes). Use for any rule, policy, fee, date, eligibility or subject doubt. Circulars override the handbook.",
+        "Search official KIT documents (handbook, circulars, notices, admissions brochure, lesson notes). Use for any rule, policy, fee, date, eligibility or subject doubt. Circulars and notices override the handbook.",
         schema({"query": {"type": "string"}, "source": {"type": "string", "enum": SOURCES}}, ["query"]),
         EVERYONE,
         search_documents,

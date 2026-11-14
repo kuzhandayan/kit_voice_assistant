@@ -97,11 +97,21 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 
 ## Tests and checks
 
-With the app running:
+```bash
+docker compose up -d --build
+./test.sh          # lint + 78 backend tests (unit + full API with fakes) + frontend tests, no keys needed
+./test.sh --e2e    # also the real browser + microphone run (23 checks)
+```
+
+What each test proves, mapped to the requirements: [`docs/TESTING.md`](docs/TESTING.md).
+
+### End-to-end test (real browser + microphone)
+
+`e2e/run_e2e.py` drives Chromium against the running app. Chromium's fake microphone plays recorded questions from `e2e/audio/`, so the full voice path is tested: mic permission → recording → silence detection → speech-to-text → agent → streamed voice reply. It covers 23 checks across public, student, rules, documents, security, history, logout and a denied microphone.
 
 ```bash
-docker compose exec backend sh -c "ruff check app tests && pytest -q"   # 52 tests: rules, permissions, confirm flow, fallbacks, documents
-docker compose exec frontend sh -c "npx tsc -b && npm test"              # types + voice activity detection
+pip install playwright && playwright install chromium
+python e2e/run_e2e.py --base http://localhost:5173
 ```
 
 ## Project structure
@@ -131,6 +141,7 @@ frontend/src/
   hooks/                  useRecorder, useAudioPlayer, useVoiceAssistant, useAuth
   components/             VoiceAssistant, VoiceOrb, Transcript, Layout
   pages/                  Home, Login, Assistant, History
+e2e/                      browser + microphone end-to-end test
 docs/                     architecture, edge cases, college API notes, todo
 ```
 

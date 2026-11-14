@@ -7,6 +7,7 @@ from typing import Any
 from app.core.errors import ProviderUnavailable
 from app.services.agent.prompts import build_system_prompt
 from app.services.agent.tools.base import ToolContext
+from app.services.agent.tools.common import audience_for
 from app.services.agent.tools.registry import CANCEL, CONFIRM, ToolRegistry
 from app.services.llm.router import LLMRouter, tool_result_json
 
@@ -91,11 +92,15 @@ class Agent:
         self._registry = registry
         self._max_steps = max_steps
 
+    @staticmethod
+    def _notices(ctx: ToolContext) -> list[str]:
+        return ctx.knowledge.overriding_titles(audience_for(ctx))
+
     async def run(self, ctx: ToolContext, history: list[dict[str, str]], user_text: str) -> AgentResult:
         today = await ctx.today()
         pending = await self._registry.pending_summary(ctx.conversation_id)
         messages: list[dict[str, Any]] = [
-            {"role": "system", "content": build_system_prompt(ctx.principal, today, pending)},
+            {"role": "system", "content": build_system_prompt(ctx.principal, today, pending, self._notices(ctx))},
             *history,
             {"role": "user", "content": user_text},
         ]

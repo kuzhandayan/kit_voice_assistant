@@ -50,6 +50,8 @@ _STOP = frozenset(
     ]
 )
 SINGLE_VERSION_TYPES = frozenset({"handbook", "brochure"})
+OVERRIDING_TYPES = frozenset({"circular", "notice"})
+OVERRIDE_BOOST = 2.0
 
 
 _US_SPELLING = re.compile(r"iz(?=[aei])")
@@ -146,6 +148,11 @@ class KnowledgeBase:
     def documents(self) -> list[DocumentMeta]:
         return list(self._docs)
 
+    def overriding_titles(self, audience: "Audience") -> list[str]:
+        """Active circulars and notices the person can see, newest first."""
+        docs = [d for d in self._docs if d.type in OVERRIDING_TYPES and audience.can_see(d)]
+        return [d.title for d in sorted(docs, key=lambda d: d.effective_date, reverse=True)]
+
     async def refresh(self, *, force: bool = False) -> None:
         if not force and self._index.bm25 and time.monotonic() - self._loaded_at < self._refresh_seconds:
             return
@@ -187,7 +194,7 @@ class KnowledgeBase:
         for score, chunk in zip(scores, index.chunks, strict=True):
             if score <= 0 or chunk.doc.type not in doc_types or not audience.can_see(chunk.doc):
                 continue
-            boost = 1.25 if chunk.doc.type == "circular" else 1.0
+            boost = OVERRIDE_BOOST if chunk.doc.type in OVERRIDING_TYPES else 1.0
             ranked.append((score * boost, chunk))
         ranked.sort(key=lambda item: item[0], reverse=True)
         return [chunk for _, chunk in ranked[:limit]]

@@ -46,7 +46,9 @@ def upcoming_dates(today: date, days: int = 14) -> str:
     )
 
 
-def build_system_prompt(principal: Principal, today: date, pending_summary: str | None) -> str:
+def build_system_prompt(
+    principal: Principal, today: date, pending_summary: str | None, notices: list[str] | None = None
+) -> str:
     parts = [BASE.format(today=today.isoformat(), weekday=today.strftime("%A"), upcoming=upcoming_dates(today))]
     p = principal.profile
     if principal.role is Role.PUBLIC:
@@ -72,6 +74,9 @@ def build_system_prompt(principal: Principal, today: date, pending_summary: str 
         parts.append(
             TEACHER_ROLE.format(name=principal.name, login_id=principal.login_id, department=p.get("department"))
         )
+    if notices and principal.role is not Role.PUBLIC:
+        listed = "; ".join(notices[:8])
+        parts.append(f"Latest circulars and notices (they override the handbook; search them for details): {listed}")
     if pending_summary:
         parts.append(PENDING.format(summary=pending_summary))
     return "\n\n".join(parts)

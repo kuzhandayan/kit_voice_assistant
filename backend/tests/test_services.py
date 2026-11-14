@@ -173,3 +173,11 @@ async def test_tts_stream_falls_back_when_edge_fails():
     tts.synthesize_fallback = fallback
     provider, stream = await tts.stream("hi")
     assert provider == "deepgram-aura" and await _collect(stream) == b"mp3"
+
+
+def test_circulars_and_notices_are_listed_for_the_prompt():
+    from app.services.knowledge.base import Audience, KnowledgeBase
+
+    kb = KnowledgeBase(client=None, clock=None)
+    kb._docs = [doc(2, "handbook", "2026-07-01"), doc(5, "circular", "2026-11-01"), doc(8, "notice", "2026-11-21")]
+    assert kb.overriding_titles(Audience()) == ["doc 8", "doc 5"]

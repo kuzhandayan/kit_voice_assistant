@@ -146,7 +146,8 @@ def check_request(
         when = ", ".join(f"{title} on {d.strftime('%d %b')}" for d, title in exams[:2])
         rule = f"{p}.1.4" if kind == "personal_leave" else "6.4.7"
         raise RuleViolation(
-            f"That range includes an internal assessment ({when}). This request is not allowed on assessment days (Rule {rule})."
+            f"That range includes an internal assessment ({when}). Leave and on-duty, including half-day leave, "
+            f"are not allowed on assessment days (Rule {rule}). Suggest a different date."
         )
 
     clashes = overlapping(existing, start, end)
