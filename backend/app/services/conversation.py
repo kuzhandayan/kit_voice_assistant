@@ -1,3 +1,6 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -22,6 +25,26 @@ class TurnResult:
     tools: list[dict[str, Any]]
 
 
+class TurnLocks:
+    """One lock per owner so a person's turns run strictly one after another (double taps, hands-free overlap)."""
+
+    def __init__(self) -> None:
+        self._locks: dict[str, asyncio.Lock] = {}
+        self._users: dict[str, int] = {}
+
+    @asynccontextmanager
+    async def hold(self, key: str) -> AsyncIterator[None]:
+        lock = self._locks.setdefault(key, asyncio.Lock())
+        self._users[key] = self._users.get(key, 0) + 1
+        try:
+            async with lock:
+                yield
+        finally:
+            self._users[key] -= 1
+            if self._users[key] == 0:
+                del self._users[key], self._locks[key]
+
+
 class ConversationService:
     """One user turn: load history, run the agent, save both messages. Shared by text and voice."""
 
@@ -35,12 +58,19 @@ class ConversationService:
     ):
         self._agent = agent
         self._repo = repo
+        self._locks = TurnLocks()
         self._college = college
         self._clock = clock
         self._knowledge = knowledge
 
     async def handle(
         self, principal: Principal, conversation_id: str | None, text: str, *, extra_meta: dict[str, Any] | None = None
+    ) -> TurnResult:
+        async with self._locks.hold(principal.owner_key):
+            return await self._handle(principal, conversation_id, text, extra_meta)
+
+    async def _handle(
+        self, principal: Principal, conversation_id: str | None, text: str, extra_meta: dict[str, Any] | None
     ) -> TurnResult:
         conversation = await self._repo.get_or_create(principal.owner_key, conversation_id, text)
         recent = await self._repo.recent_messages(conversation.id, HISTORY_TURNS)

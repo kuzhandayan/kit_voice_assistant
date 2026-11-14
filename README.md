@@ -53,7 +53,7 @@ More detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · edge cases: [`doc
 | Part | Choice | Why |
 |---|---|---|
 | Backend | Python 3.11, FastAPI, httpx, SQLAlchemy (async), pydantic-settings | Async I/O for many external calls, typed config and schemas |
-| LLM | Groq `openai/gpt-oss-120b` → Gemini `gemini-3.5-flash` → Groq `gpt-oss-20b` → Groq `qwen3.8-27b` → Gemini `3.1-flash-lite` | Fast tool calling (0.4–2 s); rate-limited models are skipped on cooldown |
+| LLM | Groq `openai/gpt-oss-120b` → Groq `gpt-oss-20b` → Groq `qwen3.8-27b` → Gemini `3.5-flash` → Gemini `3.1-flash-lite` | Fast tool calling (0.4–1 s); 8 s per provider; rate-limited or slow providers are skipped on cooldown |
 | Speech-to-text | Groq `whisper-large-v3-turbo` → Deepgram `nova-3` | Accurate for Indian English, with a college vocabulary hint |
 | Text-to-speech | Edge neural voice `en-IN-NeerjaNeural` → Deepgram `aura-2` → browser voice | Natural Indian English voice, free |
 | Documents | Pulled from the college API at runtime → PDF text → rule-level chunks → BM25 | No embedding service to fail; picks up new or surprise documents without a restart |

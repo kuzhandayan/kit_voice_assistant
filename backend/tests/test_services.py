@@ -155,7 +155,7 @@ async def test_tts_stream_uses_edge_chunks():
     assert provider == "edge-tts" and await _collect(stream) == b"ab"
 
 
-async def test_tts_stream_falls_back_when_edge_fails():
+async def test_tts_stream_falls_back_to_full_synthesis_when_no_stream_works():
     from app.core.config import Settings
     from app.services.resilience import FallbackResult
     from app.services.speech.tts import TextToSpeech
@@ -166,13 +166,13 @@ async def test_tts_stream_falls_back_when_edge_fails():
         raise RuntimeError("edge down")
         yield b""
 
-    async def fallback(text):
-        return FallbackResult("deepgram-aura", b"mp3", 1)
+    async def full(text):
+        return FallbackResult("edge-tts", b"mp3", 1)
 
     tts._edge_chunks = lambda text: broken()
-    tts.synthesize_fallback = fallback
+    tts.synthesize = full
     provider, stream = await tts.stream("hi")
-    assert provider == "deepgram-aura" and await _collect(stream) == b"mp3"
+    assert provider == "edge-tts" and await _collect(stream) == b"mp3"
 
 
 def test_circulars_and_notices_are_listed_for_the_prompt():
@@ -181,3 +181,89 @@ def test_circulars_and_notices_are_listed_for_the_prompt():
     kb = KnowledgeBase(client=None, clock=None)
     kb._docs = [doc(2, "handbook", "2026-07-01"), doc(5, "circular", "2026-11-01"), doc(8, "notice", "2026-11-21")]
     assert kb.overriding_titles(Audience()) == ["doc 8", "doc 5"]
+
+
+async def test_slow_provider_times_out_and_cools_down():
+    import asyncio
+
+    from app.services.llm.router import LLMProvider, LLMRouter
+
+    class Slow(LLMProvider):
+        async def _complete(self, messages, tools):
+            await asyncio.sleep(1)
+
+    class Fast(LLMProvider):
+        async def _complete(self, messages, tools):
+            return "fast answer"
+
+    slow, fast = Slow("slow", "groq", None, "m"), Fast("fast", "groq", None, "m")
+    router = LLMRouter([slow, fast], timeout=0.05)
+    result = await router.complete([], [])
+    assert result.provider == "fast" and slow.cooling_down
+    again = await router.complete([], [])
+    assert again.provider == "fast" and again.latency_ms < 50
+
+
+async def test_tts_falls_back_to_streaming_deepgram():
+    from app.core.config import Settings
+    from app.services.speech.tts import TextToSpeech
+
+    tts = TextToSpeech(Settings(deepgram_api_key="k"), http=None)
+
+    async def broken():
+        raise RuntimeError("edge down")
+        yield b""
+
+    async def deepgram():
+        yield b"dg1"
+        yield b"dg2"
+
+    tts._edge_chunks = lambda text: broken()
+    tts._deepgram_chunks = lambda text: deepgram()
+    provider, stream = await tts.stream("hi")
+    assert provider == "deepgram-aura" and await _collect(stream) == b"dg1dg2"
+
+
+async def test_turns_of_the_same_person_run_one_by_one():
+    import asyncio
+
+    from app.services.conversation import TurnLocks
+
+    locks, log = TurnLocks(), []
+
+    async def turn(owner, name):
+        async with locks.hold(owner):
+            log.append(f"start {name}")
+            await asyncio.sleep(0.02)
+            log.append(f"end {name}")
+
+    await asyncio.gather(turn("user:1", "a"), turn("user:1", "b"), turn("user:2", "c"))
+    mine = [e for e in log if e[-1] in "ab"]
+    assert mine in (["start a", "end a", "start b", "end b"], ["start b", "end b", "start a", "end a"])
+    assert log.index("start c") < log.index("end a")  # other people are not blocked
+    assert locks._locks == {}  # no leak
+
+
+def test_groq_tools_accept_null_for_optional_fields_only():
+    from app.services.llm.router import allow_null_optionals
+
+    tool = {
+        "type": "function",
+        "function": {
+            "name": "t",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "a": {"type": "string"},
+                    "b": {"type": "string"},
+                    "c": {"type": "string", "enum": ["x"]},
+                },
+                "required": ["a"],
+            },
+        },
+    }
+    props = allow_null_optionals([tool])[0]["function"]["parameters"]["properties"]
+    assert props["a"] == {"type": "string"}
+    assert props["b"] == {"type": ["string", "null"]}
+    assert props["c"] == {"type": ["string", "null"], "enum": ["x", None]}
+    assert tool["function"]["parameters"]["properties"]["b"] == {"type": "string"}  # original untouched

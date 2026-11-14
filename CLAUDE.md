@@ -42,6 +42,7 @@ Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026
 - Chrome's `scrollIntoView` returns a Promise → never return it from `useEffect`; and it scrolls the whole page, so scroll the transcript box with `scrollTop` instead.
 - SQLite drops timezones → API schemas force UTC (`UtcDatetime`).
 - The college data changes live (exam rescheduled, surprise circulars/notices) → never hardcode dates or document types.
+- Groq rejects `null` for optional tool args unless the schema allows it → `allow_null_optionals` for Groq only.
 - Apple Silicon containers don't get `greenlet` with plain `sqlalchemy` → use `sqlalchemy[asyncio]`.
 
 ## Working rules

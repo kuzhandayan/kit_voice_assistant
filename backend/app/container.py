@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -37,6 +37,7 @@ class Services:
     tts: TextToSpeech
     llm: LLMRouter
     rate_limiter: RateLimiter
+    phrase_audio: dict[str, bytes] = field(default_factory=dict)
 
     async def aclose(self) -> None:
         await self.college.aclose()
@@ -74,4 +75,11 @@ async def build_services(settings: Settings) -> Services:
         rate_limiter=RateLimiter(settings.rate_limit_per_minute),
     )
     asyncio.create_task(knowledge.refresh(force=True))
+    asyncio.create_task(_warm_voice(services))
     return services
+
+
+async def _warm_voice(services: Services) -> None:
+    from app.api.routes_assistant import SYSTEM_PHRASES
+
+    services.phrase_audio.update(await services.tts.warm_up(SYSTEM_PHRASES))

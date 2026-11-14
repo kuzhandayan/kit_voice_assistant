@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import time
@@ -18,7 +19,10 @@ PROVIDER_URLS = {
 }
 # Gemini 3 rejects tool-call history it did not sign itself, so tool turns are sent to it as plain text.
 FLATTEN_TOOL_HISTORY = {"gemini"}
+# Groq validates tool arguments strictly; models often send null for optional fields, so allow it.
+NULLABLE_OPTIONALS = {"groq"}
 DEFAULT_COOLDOWN_SECONDS = 20.0
+TIMEOUT_COOLDOWN_SECONDS = 30.0
 MAX_OUTPUT_TOKENS = 300
 
 
@@ -61,6 +65,23 @@ def flatten_tool_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]
     return flat
 
 
+def allow_null_optionals(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Marks every optional, single-typed property as also accepting null."""
+    adjusted = []
+    for tool in tools:
+        params = tool["function"]["parameters"]
+        required = set(params.get("required", []))
+        props = {}
+        for name, spec in params.get("properties", {}).items():
+            if name not in required and isinstance(spec.get("type"), str):
+                spec = {**spec, "type": [spec["type"], "null"]}
+                if "enum" in spec:
+                    spec["enum"] = [*spec["enum"], None]
+            props[name] = spec
+        adjusted.append({**tool, "function": {**tool["function"], "parameters": {**params, "properties": props}}})
+    return adjusted
+
+
 def _retry_after(exc: RateLimitError) -> float:
     try:
         return min(float(exc.response.headers.get("retry-after", DEFAULT_COOLDOWN_SECONDS)), 60.0)
@@ -81,9 +102,20 @@ class LLMProvider:
     def cooling_down(self) -> bool:
         return time.monotonic() < self.cooldown_until
 
-    async def complete(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> ChatCompletionMessage:
+    async def complete(
+        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]], timeout: float
+    ) -> ChatCompletionMessage:
+        try:
+            return await asyncio.wait_for(self._complete(messages, tools), timeout)
+        except TimeoutError:
+            self.cooldown_until = time.monotonic() + TIMEOUT_COOLDOWN_SECONDS
+            raise
+
+    async def _complete(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> ChatCompletionMessage:
         if self.vendor in FLATTEN_TOOL_HISTORY:
             messages = flatten_tool_history(messages)
+        if self.vendor in NULLABLE_OPTIONALS and tools:
+            tools = allow_null_optionals(tools)
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -129,8 +161,8 @@ class LLMRouter:
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
     ) -> FallbackResult[ChatCompletionMessage]:
         ready = [p for p in self._providers if not p.cooling_down] or self._providers
-        attempts = [Attempt(p.name, lambda p=p: p.complete(messages, tools)) for p in ready]
-        return await with_fallback(attempts, timeout=self._timeout, label="LLM")
+        attempts = [Attempt(p.name, lambda p=p: p.complete(messages, tools, self._timeout)) for p in ready]
+        return await with_fallback(attempts, timeout=self._timeout + 1, label="LLM")
 
 
 def tool_result_json(output: dict[str, Any], limit: int) -> str:

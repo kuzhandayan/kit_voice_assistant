@@ -83,7 +83,6 @@ async def voice_turn(
 
 
 SYSTEM_PHRASES = {"not-heard": NOT_HEARD, "greeting": "Hi! I'm the KIT assistant. How can I help you today?"}
-_phrase_cache: dict[str, bytes] = {}
 
 
 def _mp3(data: bytes, provider: str) -> Response:
@@ -97,9 +96,10 @@ async def system_phrase(phrase: str, services: ServicesDep) -> Response:
     text = SYSTEM_PHRASES.get(phrase)
     if text is None:
         raise NotFound("Unknown phrase.")
-    if phrase not in _phrase_cache:
-        _phrase_cache[phrase] = (await services.tts.synthesize(text)).value
-    return _mp3(_phrase_cache[phrase], "cache")
+    cache = services.phrase_audio
+    if phrase not in cache:
+        cache[phrase] = (await services.tts.synthesize(text)).value
+    return _mp3(cache[phrase], "cache")
 
 
 @router.get("/voice/tts/{message_id}")

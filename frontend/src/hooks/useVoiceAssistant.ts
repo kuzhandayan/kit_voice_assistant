@@ -25,17 +25,22 @@ export function useVoiceAssistant(onLevel: (level: number) => void) {
   const recorder = useRecorder(onLevel);
   const player = useAudioPlayer();
   const listenRef = useRef<() => void>(() => undefined);
+  const busyRef = useRef(false);
+  const generationRef = useRef(0);
 
   const append = (role: ChatMessage["role"], text: string) =>
     setMessages((current) => [...current, { id: nextId(), role, text }]);
 
   const respond = useCallback(
-    (turn: Turn, fromVoice: boolean) => {
+    (turn: Turn, fromVoice: boolean, generation: number) => {
+      busyRef.current = false;
+      if (generation !== generationRef.current) return;
       if (turn.conversation_id) conversationRef.current = turn.conversation_id;
       if (turn.transcript && fromVoice) append("user", turn.transcript);
       append("assistant", turn.reply);
       setStatus("speaking");
       player.play(turn.audio_url, turn.reply, () => {
+        if (generation !== generationRef.current) return;
         setStatus("idle");
         if (fromVoice && handsFreeRef.current && turn.reply_message_id) listenRef.current();
       });
@@ -44,19 +49,26 @@ export function useVoiceAssistant(onLevel: (level: number) => void) {
   );
 
   const fail = (err: unknown) => {
+    busyRef.current = false;
     setStatus("idle");
     setError(err instanceof MicError || err instanceof ApiError ? err.message : "Something went wrong. Try again.");
   };
 
   const listen = useCallback(async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    const generation = generationRef.current;
     player.stop();
     setError(null);
     setStatus("listening");
     try {
       const audio = await recorder.record();
-      if (!audio) return setStatus("idle");
+      if (!audio || generation !== generationRef.current) {
+        busyRef.current = false;
+        return setStatus("idle");
+      }
       setStatus("thinking");
-      respond(await api.voiceTurn(audio, conversationRef.current), true);
+      respond(await api.voiceTurn(audio, conversationRef.current), true, generation);
     } catch (err) {
       fail(err);
     }
@@ -66,13 +78,15 @@ export function useVoiceAssistant(onLevel: (level: number) => void) {
   const sendText = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed) return;
+      if (!trimmed || busyRef.current) return;
+      busyRef.current = true;
+      const generation = generationRef.current;
       player.stop();
       setError(null);
       append("user", trimmed);
       setStatus("thinking");
       try {
-        respond(await api.chatTurn(trimmed, conversationRef.current), false);
+        respond(await api.chatTurn(trimmed, conversationRef.current), false, generation);
       } catch (err) {
         fail(err);
       }
@@ -89,6 +103,8 @@ export function useVoiceAssistant(onLevel: (level: number) => void) {
   }, [player, recorder, status]);
 
   const reset = useCallback(() => {
+    generationRef.current += 1;
+    busyRef.current = false;
     player.stop();
     recorder.stop();
     conversationRef.current = null;

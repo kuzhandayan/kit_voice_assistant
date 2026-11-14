@@ -1,6 +1,7 @@
 import asyncio
+import logging
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 import edge_tts
 import httpx
@@ -8,11 +9,12 @@ import httpx
 from app.core.config import Settings
 from app.services.resilience import Attempt, FallbackResult, with_fallback
 
-FIRST_CHUNK_TIMEOUT_SECONDS = 4.0
+logger = logging.getLogger(__name__)
+FIRST_CHUNK_TIMEOUT_SECONDS = 5.0
 
 
 class TextToSpeech:
-    """Edge neural voice first (free, no key), Deepgram Aura as fallback. MP3 output."""
+    """Edge neural voice first (free, no key), Deepgram Aura as fallback. MP3 output, streamed."""
 
     def __init__(self, settings: Settings, http: httpx.AsyncClient):
         self._settings = settings
@@ -30,55 +32,69 @@ class TextToSpeech:
 
         return generate()
 
-    async def _edge(self, text: str) -> bytes:
-        chunks = [chunk async for chunk in self._edge_chunks(text)]
-        if not chunks:
-            raise RuntimeError("Edge TTS returned no audio")
-        return b"".join(chunks)
+    def _deepgram_chunks(self, text: str) -> AsyncIterator[bytes]:
+        async def generate() -> AsyncIterator[bytes]:
+            async with self._http.stream(
+                "POST",
+                "https://api.deepgram.com/v1/speak",
+                params={"model": self._settings.deepgram_tts_model, "encoding": "mp3"},
+                headers={"Authorization": f"Token {self._settings.deepgram_api_key}"},
+                json={"text": text},
+            ) as response:
+                response.raise_for_status()
+                async for chunk in response.aiter_bytes():
+                    yield chunk
 
-    async def _deepgram(self, text: str) -> bytes:
-        response = await self._http.post(
-            "https://api.deepgram.com/v1/speak",
-            params={"model": self._settings.deepgram_tts_model, "encoding": "mp3"},
-            headers={"Authorization": f"Token {self._settings.deepgram_api_key}"},
-            json={"text": text},
-        )
-        response.raise_for_status()
-        return response.content
+        return generate()
+
+    def _sources(self) -> list[tuple[str, Callable[[str], AsyncIterator[bytes]]]]:
+        sources: list[tuple[str, Callable[[str], AsyncIterator[bytes]]]] = [("edge-tts", self._edge_chunks)]
+        if self._settings.deepgram_api_key:
+            sources.append(("deepgram-aura", self._deepgram_chunks))
+        return sources
 
     async def synthesize(self, text: str) -> FallbackResult[bytes]:
-        attempts: list[Attempt[bytes]] = [Attempt("edge-tts", lambda: self._edge(text))]
-        if self._settings.deepgram_api_key:
-            attempts.append(Attempt("deepgram-aura", lambda: self._deepgram(text)))
+        attempts = [Attempt(name, lambda open_=open_: _collect(open_(text))) for name, open_ in self._sources()]
         return await with_fallback(attempts, timeout=self._settings.tts_timeout_seconds, label="TTS")
 
     async def stream(self, text: str) -> tuple[str, AsyncIterator[bytes]]:
-        """Streams Edge audio as it is generated so playback starts on the first chunk.
-        Falls back to a full synthesis (Deepgram) if Edge can't produce its first chunk in time."""
-        chunks = self._edge_chunks(text)
-        try:
-            first = await asyncio.wait_for(anext(chunks), FIRST_CHUNK_TIMEOUT_SECONDS)
-        except (TimeoutError, Exception):  # noqa: BLE001 - any Edge failure falls back
-            await chunks.aclose()
-            result = await self.synthesize_fallback(text)
+        """Starts playback on the first chunk. Each voice gets a few seconds to produce it, then the next one is tried."""
+        for name, open_stream in self._sources():
+            chunks = open_stream(text)
+            try:
+                first = await asyncio.wait_for(anext(chunks), FIRST_CHUNK_TIMEOUT_SECONDS)
+            except Exception as exc:  # noqa: BLE001 - any failure, including timeout, moves to the next voice
+                logger.warning("TTS stream '%s' failed before the first chunk: %s", name, type(exc).__name__)
+                await chunks.aclose()
+                continue
+            return name, _prepend(first, chunks)
+        result = await self.synthesize(text)
+        return result.provider, _prepend(result.value, _empty())
 
-            async def single() -> AsyncIterator[bytes]:
-                yield result.value
+    async def warm_up(self, phrases: dict[str, str]) -> dict[str, bytes]:
+        """Pre-generates fixed phrases at startup; this also opens the voice connection early."""
+        cache: dict[str, bytes] = {}
+        for key, text in phrases.items():
+            try:
+                cache[key] = (await self.synthesize(text)).value
+            except Exception as exc:  # noqa: BLE001 - warm-up is best effort
+                logger.warning("TTS warm-up failed for '%s': %s", key, type(exc).__name__)
+        return cache
 
-            return result.provider, single()
 
-        async def rest() -> AsyncIterator[bytes]:
-            yield first
-            async for chunk in chunks:
-                yield chunk
+async def _collect(chunks: AsyncIterator[bytes]) -> bytes:
+    data = b"".join([chunk async for chunk in chunks])
+    if not data:
+        raise RuntimeError("TTS returned no audio")
+    return data
 
-        return "edge-tts", rest()
 
-    async def synthesize_fallback(self, text: str) -> FallbackResult[bytes]:
-        if not self._settings.deepgram_api_key:
-            return await self.synthesize(text)
-        return await with_fallback(
-            [Attempt("deepgram-aura", lambda: self._deepgram(text))],
-            timeout=self._settings.tts_timeout_seconds,
-            label="TTS",
-        )
+async def _prepend(first: bytes, rest: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
+    yield first
+    async for chunk in rest:
+        yield chunk
+
+
+async def _empty() -> AsyncIterator[bytes]:
+    return
+    yield b""

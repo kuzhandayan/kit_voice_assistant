@@ -292,3 +292,28 @@ def test_rate_limit(tmp_path, monkeypatch):
         client.get("/api/auth/me")
         codes = [client.post("/api/chat/turn", json={"text": "hi"}).status_code for _ in range(3)]
         assert codes == [200, 200, 429]
+
+
+def test_model_asking_to_confirm_without_preparing_is_forced_to_call_the_tool(app):
+    client, college, llm = app
+    login(client)
+    original = llm.complete
+
+    async def lazy_then_correct(messages, tools):
+        if messages[-1]["role"] == "user" and "apply leave on" in messages[-1]["content"].lower():
+            from app.services.resilience import FallbackResult
+            from tests.fakes import _message
+
+            return FallbackResult("fake:llm", _message("Sure, I'll draft that. Shall I submit it?"), 1)
+        if messages[-1]["role"] == "user" and "not called the action tool" in messages[-1]["content"]:
+            from app.services.resilience import FallbackResult
+            from tests.fakes import _call, _message
+
+            args = {"type": "personal_leave", "from_date": "2026-11-25", "reason": "family"}
+            return FallbackResult("fake:llm", _message(calls=[_call("create_leave_or_od_request", args)]), 1)
+        return await original(messages, tools)
+
+    llm.complete = lazy_then_correct
+    data = turn(client, "apply leave on 2026-11-25")
+    assert data["tools"][0]["status"] == "not_allowed"
+    assert "assessment" in data["reply"].lower() and college.requests == []

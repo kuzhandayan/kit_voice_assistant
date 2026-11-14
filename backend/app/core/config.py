@@ -21,12 +21,12 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./kit.db"
 
     llm_chain: str = (
-        "groq:openai/gpt-oss-120b@low,gemini:gemini-3.5-flash@low,groq:openai/gpt-oss-20b@low,"
-        "groq:qwen/qwen3.8-27b@none,gemini:gemini-3.1-flash-lite@low"
+        "groq:openai/gpt-oss-120b@low,groq:openai/gpt-oss-20b@low,groq:qwen/qwen3.8-27b@none,"
+        "gemini:gemini-3.5-flash@low,gemini:gemini-3.1-flash-lite@low"
     )
     groq_api_key: str = ""
     gemini_api_key: str = ""
-    llm_timeout_seconds: float = 20
+    llm_timeout_seconds: float = 8
 
     groq_stt_model: str = "whisper-large-v3-turbo"
     deepgram_api_key: str = ""

@@ -38,7 +38,7 @@ flowchart LR
 | Request/response voice turns (not WebSockets) | Simpler, robust on free hosting, easy to test. Latency kept low by fast providers and returning text before audio. |
 | Text first, audio second (`/turn` then `/tts`) | User sees the transcript and reply instantly; TTS streams separately and can fall back independently. |
 | One `with_fallback` helper (`services/resilience.py`) | STT, LLM and TTS share the same timeout/retry/fallback logic — one tested component, not three copies. |
-| OpenAI-compatible adapter for Groq and Gemini | One code path for tool calling; the chain is config (`LLM_CHAIN=vendor:model@effort,...`). Chain: Groq gpt-oss-120b → Gemini 3.5 Flash → Groq gpt-oss-20b → Groq qwen3.8-27b → Gemini 3.1 Flash Lite. Each Groq model has its own free-tier limit (8K tokens/min), so more models = more headroom. |
+| OpenAI-compatible adapter for Groq and Gemini | One code path for tool calling; the chain is config (`LLM_CHAIN=vendor:model@effort,...`). Chain: Groq gpt-oss-120b → Groq gpt-oss-20b → Groq qwen3.8-27b → Gemini 3.5 Flash → Gemini 3.1 Flash Lite. Each attempt has an 8 s limit; a provider that times out is skipped for 30 s (seen live: Gemini hanging 15 s under load). Each Groq model has its own free-tier limit (8K tokens/min), so more models = more headroom. |
 | Tool registry keyed by role (`public`, `student`, `teacher`) | Security in code. The LLM only ever sees tools it is allowed to use. |
 | User id injected server-side | Tool schemas for "self" data have no `student_id` argument at all. |
 | Confirm-before-write | All write tools return a pending action; the agent reads it back and only `confirm_action` submits it. Prevents wrong submissions from mis-heard speech. |
@@ -102,6 +102,11 @@ The college system runs on its own date (`/v1/today` ≠ real date). A `CollegeC
 - `docker compose up`: backend (uvicorn `--reload`, code mounted), frontend (Vite HMR, polling watcher for Docker on macOS), Postgres. Browser talks to Vite on :5173, which proxies `/api` to the backend, so cookies stay same-origin.
 - Production uses the root `Dockerfile` (built by Render), not Compose.
 
+## Concurrency: one turn at a time per person
+- All I/O is async (httpx, async SQLAlchemy, async OpenAI client, edge-tts); PDF parsing runs in a worker thread.
+- Backend: `ConversationService` holds a per-owner `asyncio.Lock` (`TurnLocks`), so one person's turns run strictly in order (double taps, hands-free overlap, two tabs), while different people run in parallel. Locks are removed when idle.
+- Frontend: `useVoiceAssistant` ignores a new turn while one is in flight, and drops late replies from a conversation the user has reset (generation counter). Tested: three instant submits send exactly one request.
+
 ## Safety of write actions (confirmation)
 1. The LLM calls an action tool → `prepare()` validates input and handbook rules (raises `RuleViolation` with the rule number) → a `PendingAction` is stored and its summary returned.
 2. The pending summary is injected into the next turn's system prompt, marked "NOT submitted yet".
@@ -110,7 +115,8 @@ The college system runs on its own date (`/v1/today` ≠ real date). A `CollegeC
 5. Consuming a pending action is an atomic update; the college API also gets an `Idempotency-Key`. A repeated "yes" can't submit twice.
 
 ## LLM rate limits and failover
-- Groq free tier: about 8K tokens/min per model. A provider that returns 429 is put on cooldown (from `retry-after`, max 60 s) and skipped, so users don't wait on a model that will refuse.
+- Groq free tier: about 8K tokens/min per model. A provider that returns 429 is put on cooldown (from `retry-after`, max 60 s) and skipped; one that times out is skipped for 30 s. Users never wait on a model that will refuse or hang.
+- Groq validates tool arguments strictly and models send `null` for optional fields (seen live: every one-day leave failed with 400). Tools sent to Groq mark optional fields as nullable (`allow_null_optionals`); verified 0/3 → 3/3.
 - Gemini 3 requires its own "thought signature" on tool-call history. When falling back to Gemini, tool calls and results are flattened into plain text (`flatten_tool_history`).
 - Token budget per call: role-scoped tools (about 1.3K tokens for students), last 8 messages, tool results capped at 3.5K chars, 300 output tokens.
 - Relative dates: the prompt includes a 14-day table of dates with weekdays from the college's date, so models look dates up instead of calculating them (smaller models got weekdays wrong).

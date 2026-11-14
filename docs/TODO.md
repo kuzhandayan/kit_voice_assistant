@@ -46,6 +46,7 @@ Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Las
 - [x] README: deploy steps + known limitations
 - [x] API-level tests: 25 HTTP tests with a fake college API, LLM, STT and TTS (78 backend tests total)
 - [x] `./test.sh` runs everything; `docs/TESTING.md` maps requirements to tests
+- [x] One turn at a time per person (backend lock + frontend busy guard); 82 backend tests; e2e 23/23
 - [ ] Act on leaderboard feedback
 - [ ] README live link
 - [ ] Final submission (before 14:00)

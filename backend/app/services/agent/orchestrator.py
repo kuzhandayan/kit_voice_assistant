@@ -20,6 +20,13 @@ _BULLET = re.compile(r"^\s*[-•]\s+", re.MULTILINE)
 _YES = re.compile(
     r"^(yes|yeah|yep|yup|sure|ok|okay|confirm|confirmed|go ahead|please do|do it|submit|submit it|haan|correct|yes please|yes go ahead|yes submit it|ok submit)$"
 )
+_ASKS_CONFIRM = re.compile(
+    r"\b(shall|should|can|may) i (submit|apply|send|register|go ahead|proceed|file)\b", re.IGNORECASE
+)
+_NUDGE = (
+    "You asked the user to confirm, but you have not called the action tool, so nothing is prepared and the "
+    "college rules were not checked. Call the action tool now with the details you have."
+)
 _NO = re.compile(r"^(no|nope|cancel|cancel it|don't|do not|stop|no thanks|leave it|never mind)$")
 
 
@@ -114,13 +121,21 @@ class Agent:
             result.provider = "rules"
             result.reply = describe_outcome(output)
             return result
+        nudged = False
         try:
             for _ in range(self._max_steps):
                 completion = await self._llm.complete(messages, tools)
                 message = completion.value
                 result.provider = completion.provider
                 if not message.tool_calls:
-                    result.reply = to_speech(message.content or "") or FALLBACK_REPLY
+                    text = message.content or ""
+                    prepared = any(t.status == "awaiting_confirmation" for t in result.tools)
+                    if _ASKS_CONFIRM.search(text) and not prepared and not pending and not nudged:
+                        nudged = True
+                        messages.append({"role": "assistant", "content": text})
+                        messages.append({"role": "user", "content": _NUDGE})
+                        continue
+                    result.reply = to_speech(text) or FALLBACK_REPLY
                     return result
                 messages.append(
                     {

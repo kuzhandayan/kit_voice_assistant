@@ -67,6 +67,11 @@ Each line: the case → how it's handled. ✅ = covered by an automated test, �
 - ✅ Expired college token mid-conversation → 401 → frontend asks to log in again.
 - 🟢 Rate limit → 429 with a friendly message.
 
+## Concurrency
+- ✅ Same person sends two turns at once → processed one by one (per-owner lock); other users unaffected.
+- 🟢 Triple submit in the browser → exactly one request.
+- ✅ Reply from a conversation the user already reset → ignored.
+
 ## Reliability
 - ✅ LLM provider fails or is rate-limited → next provider; cooldown on 429.
 - ✅ Gemini fallback with Groq tool history → history flattened to text.
