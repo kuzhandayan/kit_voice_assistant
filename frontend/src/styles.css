@@ -124,7 +124,8 @@ tbody th { font-weight: 700; }
 .history li a:hover, .history li a.active { background: var(--paper); }
 .history__title { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history__detail { background: var(--paper); border-radius: var(--radius-lg); padding: 1.5rem; min-height: 50vh; }
-.history__detail .transcript { max-height: none; }
+.history__detail .transcript { max-height: calc(100vh - 15rem); min-height: 12rem; }
+.history ul { max-height: calc(100vh - 13rem); overflow-y: auto; }
 
 @keyframes breathe { 50% { transform: scale(1.12); opacity: 0.35; } }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -132,6 +133,8 @@ tbody th { font-weight: 700; }
 
 @media (max-width: 880px) {
   .hero, .assistant--wide, .history { grid-template-columns: 1fr; }
+  .history ul { max-height: 30vh; }
+  .history__detail .transcript { max-height: 60vh; }
   .assistant--wide .assistant__control { order: 0; position: static; }
   .brand__name { display: none; }
   .brand__short { display: inline; }

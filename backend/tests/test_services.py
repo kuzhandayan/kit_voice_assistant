@@ -274,3 +274,13 @@ def test_to_speech_removes_repeats_and_fixes_glued_sentences():
         "Got it. Could you share your phone number?Could you share your phone number?Please tell me your phone number."
     )
     assert to_speech(raw) == "Got it. Could you share your phone number? Please tell me your phone number."
+
+
+def test_to_speech_cuts_a_looping_reply_at_the_first_ellipsis():
+    raw = (
+        "Which of the three B. Tech programs would you like to apply for – CSE, ECE or Mechanical?... "
+        "Please let me know the specific course (CSE, ECE or Mechanical) you'd like to apply for.... Could you tell me which"
+    )
+    assert to_speech(raw) == "Which of the three B. Tech programs would you like to apply for – CSE, ECE or Mechanical?"
+    assert to_speech("Let me check… One moment") == "Let me check."
+    assert to_speech("Your reference number is 11. Good luck!") == "Your reference number is 11. Good luck!"

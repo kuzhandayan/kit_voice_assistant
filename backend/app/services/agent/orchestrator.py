@@ -69,14 +69,20 @@ class AgentResult:
 
 
 _GLUED = re.compile(r"([.?!])(?=[A-Z])")
+_LOOP = re.compile(r"[.?!](?:\.{2,}|…)\s*\S|[^.?!\s](?:\.{3,}|…)\s+\S")
 _SENTENCE = re.compile(r"(?<=[.?!])\s+")
 
 
 def to_speech(text: str) -> str:
-    """Plain spoken text: no markdown, spaces after sentence ends, repeated sentences removed."""
+    """Plain spoken text: no markdown, spaces after sentence ends, no repeats or looping."""
     text = _BULLET.sub("", text or "")
     text = _MARKDOWN.sub("", text)
     text = _GLUED.sub(r"\1 ", re.sub(r"\s+", " ", text)).strip()
+    loop = _LOOP.search(text)
+    if loop:
+        text = text[: loop.start() + 1].rstrip(" ,;:-–")
+        if text[-1:] not in ".?!":
+            text += "."
     seen: set[str] = set()
     kept: list[str] = []
     for sentence in _SENTENCE.split(text):

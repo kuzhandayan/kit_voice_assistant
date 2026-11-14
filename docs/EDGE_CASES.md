@@ -6,7 +6,7 @@ Each line: the case → how it's handled. ✅ = covered by an automated test, �
 - 🟢 Silence or noise only → no LLM call; spoken "Sorry, I didn't catch that" (server rejects tiny audio and Whisper filler like "Thank you.").
 - ✅ Long recording → client VAD caps at 30 s; server rejects > 5 MB (413).
 - ✅ Nobody speaks after tapping → recording aborts after 8 s.
-- ✅ Speaker pauses → recording stops after 1.2 s of silence.
+- ✅ Speaker pauses → recording stops after 1.7 s of silence.
 - 🟢 Mic permission denied / no mic → clear message; typed input still works (e2e).
 - 🟢 User taps while the assistant speaks → playback stops (tap-to-interrupt).
 - 🟢 Indian English names and course codes → Whisper prompt with KIT vocabulary.

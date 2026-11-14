@@ -49,7 +49,7 @@ flowchart LR
 | Single Docker image | One deploy target, one https URL, no CORS. |
 
 ## Request flow (voice turn)
-1. Browser records until ~1.2 s of silence (or the user taps stop). Max 30 s, max 5 MB.
+1. Browser records until ~1.7 s of silence (or the user taps stop). Max 30 s, max 5 MB.
 2. `POST /api/voice/turn` (multipart audio + `conversation_id`).
 3. STT chain → transcript. Empty/too-short transcript → "Sorry, I didn't catch that."
 4. Agent loop (max 6 tool rounds): LLM with role tools → execute tools → feed results back → final reply. Reply style: short, spoken, no markdown.
@@ -92,7 +92,7 @@ The college system runs on its own date (`/v1/today` ≠ real date). A `CollegeC
 
 ## Frontend
 - One `VoiceAssistant` component for every mode; the server decides capabilities from the session.
-- `useRecorder`: MediaRecorder + Web Audio analyser. `lib/vad.ts` (pure, unit-tested) stops after 1.2 s of silence following speech, aborts after 8 s of no speech, caps at 30 s.
+- `useRecorder`: MediaRecorder + Web Audio analyser. `lib/vad.ts` (pure, unit-tested) stops after 1.7 s of silence following speech, aborts after 8 s of no speech, caps at 30 s.
 - `useAudioPlayer`: plays `/api/voice/tts/{message_id}`; falls back to the browser voice (synthesis only) if audio fails.
 - `useVoiceAssistant`: state machine idle → listening → thinking → speaking → (hands-free) listening. Tapping the orb interrupts speech or stops recording.
 - Typed text input and suggestion chips for when speaking isn't possible.

@@ -15,7 +15,7 @@ export type VadDecision = "continue" | "stop" | "abort";
 
 export const DEFAULT_VAD: VadConfig = {
   speechThreshold: 0.035,
-  silenceMs: 1200,
+  silenceMs: 1700,
   noSpeechTimeoutMs: 8000,
   maxMs: 30000,
 };
