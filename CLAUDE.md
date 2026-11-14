@@ -30,8 +30,8 @@ Max 3 submissions, latest counts. Never let a later submission be worse than an 
 - Public GitHub repo, single branch, < 10 MB, README with what + how to run.
 - "Things may change during the event" — keep endpoints, rules and knowledge files config-driven.
 
-## Status (13:08) — live at https://kit-voice-assistant-j7ps.onrender.com, e2e 23/23 on live
-Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026`. Waiting on: teacher login, Supabase password, GitHub push, Render deploy. See `docs/TODO.md`.
+## Status (13:42) — live at https://kit-voice-assistant-j7ps.onrender.com, e2e 23/23 on live; 85 backend + 9 frontend tests
+Deployed on Render + Supabase; verified live with student `arjun` / `Kit@2026`. Only open item: no teacher login (teacher flow unit-tested). See `docs/TODO.md`.
 
 ## Hard-won lessons (don't regress)
 - College date ≠ real date: always `CollegeClock`.

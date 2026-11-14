@@ -1,15 +1,15 @@
 # TODO
 
-Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 13:08.
+Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 13:42.
 
 ## 0. Inputs from Kuzhandayan
 - [x] College API URL, Swagger, participant key (tested 11:15)
 - [x] Groq, Gemini, Deepgram keys (verified 11:40)
 - [x] Student test login (`arjun`, from the Swagger example)
-- [ ] **Teacher test login** ("How to connect")
-- [ ] **Supabase password** in `DATABASE_URL` (currently the literal word `PASSWORD`)
-- [ ] GitHub repo pushed (public, `main` only)
-- [ ] Render blueprint deployed + env values set
+- [ ] **Teacher test login** ("How to connect") — not available; teacher flow unit-tested only
+- [x] Supabase `DATABASE_URL` (session pooler), tables created, conversations stored
+- [x] GitHub repo pushed (public, `main` only)
+- [x] Render blueprint deployed + env values set
 - [ ] Uptime ping on `/api/health`
 
 ## 1. Setup — done
@@ -48,6 +48,7 @@ Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Las
 - [x] API-level tests: 25 HTTP tests with a fake college API, LLM, STT and TTS (78 backend tests total)
 - [x] `./test.sh` runs everything; `docs/TESTING.md` maps requirements to tests
 - [x] One turn at a time per person (backend lock + frontend busy guard); 82 backend tests; e2e 23/23
+- [x] Live voice testing fixes: one voice at a time (stale audio can't trigger the browser voice), repeated/looping replies cleaned, short yes/no handled in code, course names in the STT hint, mic waits 1.7 s of silence, History scrolls inside its panel, loading state + 60 s request timeout
 - [ ] Act on leaderboard feedback
 - [x] README live link
 - [ ] Final submission (before 14:00)

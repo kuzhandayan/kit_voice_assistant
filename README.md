@@ -99,7 +99,7 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 
 ```bash
 docker compose up -d --build
-./test.sh          # lint + 78 backend tests (unit + full API with fakes) + frontend tests, no keys needed
+./test.sh          # lint + 85 backend tests (unit + full API with fakes) + frontend tests, no keys needed
 ./test.sh --e2e    # also the real browser + microphone run (23 checks)
 ```
 
@@ -162,4 +162,5 @@ docs/                     architecture, edge cases, college API notes, todo
 - Edge TTS uses Microsoft's public neural voices without an SLA. If it fails, Deepgram Aura and then the browser voice take over.
 - Rate limiting and caches are in memory, which suits a single instance. Several instances would need Redis.
 - Render's free plan sleeps when idle; the first request after a long pause is slow unless the uptime ping is on.
+- Teacher approvals are built and unit-tested, but not tried live: no teacher login was available during the event.
 - Interrupting while the assistant speaks is tap-to-interrupt, not automatic, to avoid the assistant hearing itself through the speakers.

@@ -2,7 +2,7 @@
 
 ```bash
 docker compose up -d --build
-./test.sh          # lint + 78 backend tests + frontend tests, about 10 s, no keys needed
+./test.sh          # lint + 85 backend tests + frontend tests, about 10 s, no keys needed
 ./test.sh --e2e    # adds the 23-check browser + microphone run against the live AI
 ```
 
