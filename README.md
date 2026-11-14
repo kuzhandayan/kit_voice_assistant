@@ -97,9 +97,11 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 
 ## Tests and checks
 
+GitHub Actions (`.github/workflows/ci.yml`) runs the same lint, type checks and tests on every push.
+
 ```bash
 docker compose up -d --build
-./test.sh          # lint + 85 backend tests (unit + full API with fakes) + frontend tests, no keys needed
+./test.sh          # lint + 86 backend tests (unit + full API with fakes) + frontend tests, no keys needed
 ./test.sh --e2e    # also the real browser + microphone run (23 checks)
 ```
 
@@ -149,7 +151,7 @@ docs/                     architecture, edge cases, college API notes, todo
 
 - **Role-scoped tools.** The tool list is chosen from the server session, never from the prompt. Visitors have no tool that reads student data, and students have no approval tools.
 - **Acts only for the logged-in person.** "My" tools take no student id; the college token in the server-side session decides whose data is read.
-- **Server-side sessions.** The browser holds only a random id in an httpOnly, SameSite cookie (Secure in production); the college token never reaches the browser and is stored against a SHA-256 of that id.
+- **Server-side sessions.** The browser holds only a random id in an httpOnly, SameSite cookie (Secure in production); the college token never reaches the browser and is stored against a SHA-256 of that id, encrypted at rest (Fernet, key derived from `SESSION_SECRET`), so a database leak exposes no usable tokens.
 - **Confirm before write.** Write actions are prepared, checked against handbook rules, read back, and run only on "yes". Each pending action is consumed once and sent with an `Idempotency-Key`, so a repeated "yes" can't submit twice.
 - **Rules enforced in code.** For example: no personal leave or on-duty on internal assessment days, no retrospective personal leave, no overlapping requests, on-duty needs an event name, placement eligibility. The assistant gives the rule number in its reply.
 - **College date.** All date logic uses the college system's own date (`/v1/today`), which differs from the real date.

@@ -66,7 +66,7 @@ async def build_services(settings: Settings) -> Services:
         college=college,
         clock=clock,
         knowledge=knowledge,
-        sessions=SessionRepository(factory),
+        sessions=SessionRepository(factory, settings.session_secret),
         conversations=conversations,
         conversation_service=ConversationService(agent, conversations, college, clock, knowledge),
         stt=SpeechToText(settings, http),

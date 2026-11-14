@@ -40,7 +40,7 @@ def build_client(tmp_path, monkeypatch, **overrides) -> tuple[TestClient, FakeCo
             college=college,
             clock=clock,
             knowledge=knowledge,
-            sessions=SessionRepository(factory),
+            sessions=SessionRepository(factory, "test-secret-0123456789"),
             conversations=conversations,
             conversation_service=ConversationService(agent, conversations, college, clock, knowledge),
             stt=FakeSTT(),

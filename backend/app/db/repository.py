@@ -1,6 +1,9 @@
+import base64
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -11,15 +14,23 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
+SECRET_FIELDS = ("college_token",)
+
+
 class SessionRepository:
-    def __init__(self, factory: async_sessionmaker[AsyncSession]):
+    """Sessions are keyed by a hash of the cookie; the college token inside is encrypted at rest."""
+
+    def __init__(self, factory: async_sessionmaker[AsyncSession], secret: str):
         self._factory = factory
+        self._cipher = Fernet(base64.urlsafe_b64encode(hashlib.sha256(secret.encode()).digest()))
 
     async def create(self, session_id: str, principal: dict[str, Any], ttl_seconds: int) -> None:
+        stored = dict(principal)
+        for field in SECRET_FIELDS:
+            if stored.get(field):
+                stored[field] = self._cipher.encrypt(stored[field].encode()).decode()
         async with self._factory() as db:
-            db.add(
-                UserSession(id=session_id, principal=principal, expires_at=utcnow() + timedelta(seconds=ttl_seconds))
-            )
+            db.add(UserSession(id=session_id, principal=stored, expires_at=utcnow() + timedelta(seconds=ttl_seconds)))
             await db.commit()
 
     async def get(self, session_id: str) -> dict[str, Any] | None:
@@ -27,7 +38,14 @@ class SessionRepository:
             row = await db.get(UserSession, session_id)
             if row is None or _aware(row.expires_at) <= utcnow():
                 return None
-            return row.principal
+        principal = dict(row.principal)
+        try:
+            for field in SECRET_FIELDS:
+                if principal.get(field):
+                    principal[field] = self._cipher.decrypt(principal[field].encode()).decode()
+        except InvalidToken:
+            return None
+        return principal
 
     async def delete(self, session_id: str) -> None:
         async with self._factory() as db:

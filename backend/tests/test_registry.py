@@ -107,3 +107,23 @@ async def test_history_is_scoped_to_owner(repos):
     assert other.id != mine.id
     message_id = (await conversations.recent_messages(mine.id, 5))[-1].id
     assert await conversations.get_owned_message("user:2", message_id) is None
+
+
+async def test_college_token_is_encrypted_at_rest(tmp_path):
+    from sqlalchemy import select
+
+    from app.db.models import UserSession
+    from app.db.repository import SessionRepository
+
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 's.db'}")
+    await init_db(engine)
+    factory = create_session_factory(engine)
+    sessions = SessionRepository(factory, "secret-0123456789abcdef")
+    await sessions.create("abc", {"role": "student", "college_token": "jwt-123"}, 60)
+
+    async with factory() as db:
+        stored = (await db.execute(select(UserSession))).scalar_one().principal
+    assert stored["college_token"] != "jwt-123"
+    assert (await sessions.get("abc"))["college_token"] == "jwt-123"
+    assert await SessionRepository(factory, "another-secret-000000").get("abc") is None
+    await engine.dispose()
