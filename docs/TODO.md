@@ -1,6 +1,6 @@
 # TODO
 
-Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 12:28.
+Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 13:08.
 
 ## 0. Inputs from Kuzhandayan
 - [x] College API URL, Swagger, participant key (tested 11:15)
@@ -38,7 +38,8 @@ Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Las
 - [x] Fixed: newer-Chrome `scrollIntoView` crash, page jump on load, UTC times in history, B.Tech label, mobile login button
 
 ## 5. Ship 1 (→ 13:15)
-- [ ] Deploy, smoke test over https
+- [x] Deployed on Render (Blueprint) with Supabase: https://kit-voice-assistant-j7ps.onrender.com
+- [x] e2e against the live site: 23/23 (browser + microphone)
 - [ ] Submission 1
 
 ## 6. Harden (→ 13:50)
@@ -48,5 +49,5 @@ Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Las
 - [x] `./test.sh` runs everything; `docs/TESTING.md` maps requirements to tests
 - [x] One turn at a time per person (backend lock + frontend busy guard); 82 backend tests; e2e 23/23
 - [ ] Act on leaderboard feedback
-- [ ] README live link
+- [x] README live link
 - [ ] Final submission (before 14:00)

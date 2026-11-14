@@ -3,7 +3,7 @@
 A real-time voice assistant for **Knotopian Institute of Technology (KIT)**, a dummy college.
 Applicants, students and teachers talk to it and hear a short spoken reply within a couple of seconds. It answers from the college's own data and documents, and completes simple requests: admission applications, leave and on-duty requests, placement registration and teacher approvals.
 
-**Live app:** _to be added_
+**Live app:** https://kit-voice-assistant-j7ps.onrender.com · **Try it:** student login `arjun` / `Kit@2026` (sample account from the college API docs)
 
 ---
 
