@@ -267,3 +267,10 @@ def test_groq_tools_accept_null_for_optional_fields_only():
     assert props["b"] == {"type": ["string", "null"]}
     assert props["c"] == {"type": ["string", "null"], "enum": ["x", None]}
     assert tool["function"]["parameters"]["properties"]["b"] == {"type": "string"}  # original untouched
+
+
+def test_to_speech_removes_repeats_and_fixes_glued_sentences():
+    raw = (
+        "Got it. Could you share your phone number?Could you share your phone number?Please tell me your phone number."
+    )
+    assert to_speech(raw) == "Got it. Could you share your phone number? Please tell me your phone number."

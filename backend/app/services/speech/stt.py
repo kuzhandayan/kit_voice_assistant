@@ -7,7 +7,8 @@ from app.core.config import Settings
 from app.services.resilience import Attempt, FallbackResult, with_fallback
 
 VOCABULARY_HINT = (
-    "KIT, Knotopian Institute of Technology, attendance, on-duty, OD, personal leave, medical leave, "
+    "KIT, Knotopian Institute of Technology, B.Tech Computer Science and Engineering, Electronics and Communication "
+    "Engineering, Mechanical Engineering, attendance, on-duty, OD, personal leave, medical leave, "
     "internal assessment, B.Tech, M.Tech, CSE, ECE, MECH, CGPA, arrears, placement, Zoho, TCS, Freshworks, DBMS, normalisation."
 )
 

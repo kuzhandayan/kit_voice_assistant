@@ -17,9 +17,34 @@ MAX_TOOL_RESULT_CHARS = 3500
 FALLBACK_REPLY = "Sorry, I'm having trouble right now. Please try again in a moment."
 _MARKDOWN = re.compile(r"[*_#`>|]+")
 _BULLET = re.compile(r"^\s*[-•]\s+", re.MULTILINE)
-_YES = re.compile(
-    r"^(yes|yeah|yep|yup|sure|ok|okay|confirm|confirmed|go ahead|please do|do it|submit|submit it|haan|correct|yes please|yes go ahead|yes submit it|ok submit)$"
+_YES_WORDS = frozenset(
+    [
+        "yes",
+        "yeah",
+        "yep",
+        "yup",
+        "sure",
+        "ok",
+        "okay",
+        "confirm",
+        "confirmed",
+        "go",
+        "ahead",
+        "please",
+        "do",
+        "it",
+        "submit",
+        "proceed",
+        "haan",
+        "correct",
+        "right",
+        "fine",
+    ]
 )
+_NO_WORDS = frozenset(
+    ["no", "nope", "cancel", "it", "don't", "dont", "do", "not", "stop", "thanks", "leave", "never", "mind", "wait"]
+)
+_NEGATIONS = frozenset({"no", "nope", "not", "don't", "dont", "cancel", "stop", "wait"})
 _ASKS_CONFIRM = re.compile(
     r"\b(shall|should|can|may) i (submit|apply|send|register|go ahead|proceed|file)\b", re.IGNORECASE
 )
@@ -27,7 +52,6 @@ _NUDGE = (
     "You asked the user to confirm, but you have not called the action tool, so nothing is prepared and the "
     "college rules were not checked. Call the action tool now with the details you have."
 )
-_NO = re.compile(r"^(no|nope|cancel|cancel it|don't|do not|stop|no thanks|leave it|never mind)$")
 
 
 @dataclass
@@ -44,10 +68,23 @@ class AgentResult:
     tools: list[ToolTrace] = field(default_factory=list)
 
 
+_GLUED = re.compile(r"([.?!])(?=[A-Z])")
+_SENTENCE = re.compile(r"(?<=[.?!])\s+")
+
+
 def to_speech(text: str) -> str:
+    """Plain spoken text: no markdown, spaces after sentence ends, repeated sentences removed."""
     text = _BULLET.sub("", text or "")
     text = _MARKDOWN.sub("", text)
-    return re.sub(r"\s+", " ", text).strip()
+    text = _GLUED.sub(r"\1 ", re.sub(r"\s+", " ", text)).strip()
+    seen: set[str] = set()
+    kept: list[str] = []
+    for sentence in _SENTENCE.split(text):
+        key = re.sub(r"[^a-z0-9]", "", sentence.lower())
+        if key and key not in seen:
+            seen.add(key)
+            kept.append(sentence)
+    return " ".join(kept)
 
 
 def _parse_args(raw: str | None) -> dict[str, Any]:
@@ -61,12 +98,15 @@ def _parse_args(raw: str | None) -> dict[str, Any]:
 
 
 def _intent(text: str) -> str | None:
-    """Clear yes/no answers to a pending action are handled in code, never guessed by the LLM."""
-    cleaned = re.sub(r"[^a-z' ]", "", text.lower()).strip()
-    if _YES.match(cleaned):
-        return "yes"
-    if _NO.match(cleaned):
+    """Clear yes/no answers to a pending action are handled in code, never guessed by the LLM.
+    A short reply made only of yes-words ("submit submit", "ok go ahead") is a yes; any negation makes it a no."""
+    words = re.sub(r"[^a-z' ]", " ", text.lower()).split()
+    if not words or len(words) > 6:
+        return None
+    if set(words) <= _NO_WORDS and set(words) & _NEGATIONS:
         return "no"
+    if set(words) <= _YES_WORDS and not set(words) & _NEGATIONS:
+        return "yes"
     return None
 
 
