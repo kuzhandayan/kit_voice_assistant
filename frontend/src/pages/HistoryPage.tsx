@@ -24,6 +24,7 @@ export function HistoryPage() {
       <aside className="history__list" aria-label="Past conversations">
         <h1>History</h1>
         {error && <p className="notice notice--error">{error}</p>}
+        {!items && !error && <p className="muted">Loading conversations…</p>}
         {items?.length === 0 && <p className="muted">No conversations yet. Talk to the assistant and they'll appear here.</p>}
         <ul>
           {items?.map((c) => (

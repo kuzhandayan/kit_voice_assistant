@@ -60,10 +60,12 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 60_000;
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(path, { credentials: "same-origin", ...init });
+    response = await fetch(path, { credentials: "same-origin", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), ...init });
   } catch {
     throw new ApiError("Can't reach the server. Check your connection and try again.", 0, "network");
   }
