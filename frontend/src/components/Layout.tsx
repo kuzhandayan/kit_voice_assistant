@@ -31,7 +31,7 @@ export function Layout() {
             </button>
           ) : (
             <NavLink to="/login" className="btn btn--quiet">
-              Student / staff login
+              Log in<span className="hide-mobile"> as student or teacher</span>
             </NavLink>
           )}
         </nav>

@@ -1,6 +1,7 @@
 import re
 
 from fastapi import APIRouter, File, Form, Response, UploadFile
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import LimitedPrincipalDep, PrincipalDep, ServicesDep
 from app.api.schemas import ChatIn, TurnOut
@@ -102,9 +103,11 @@ async def system_phrase(phrase: str, services: ServicesDep) -> Response:
 
 
 @router.get("/voice/tts/{message_id}")
-async def message_audio(message_id: int, principal: PrincipalDep, services: ServicesDep) -> Response:
+async def message_audio(message_id: int, principal: PrincipalDep, services: ServicesDep) -> StreamingResponse:
     message = await services.conversations.get_owned_message(principal.owner_key, message_id)
     if message is None or message.role != "assistant":
         raise NotFound("Message not found.")
-    result = await services.tts.synthesize(message.content)
-    return _mp3(result.value, result.provider)
+    provider, chunks = await services.tts.stream(message.content)
+    return StreamingResponse(
+        chunks, media_type="audio/mpeg", headers={"Cache-Control": "private, no-store", "X-TTS-Provider": provider}
+    )

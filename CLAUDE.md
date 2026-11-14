@@ -30,7 +30,7 @@ Max 3 submissions, latest counts. Never let a later submission be worse than an 
 - Public GitHub repo, single branch, < 10 MB, README with what + how to run.
 - "Things may change during the event" — keep endpoints, rules and knowledge files config-driven.
 
-## Status (12:00)
+## Status (12:20)
 Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026`. Waiting on: teacher login, Supabase password, GitHub push, Render deploy. See `docs/TODO.md`.
 
 ## Hard-won lessons (don't regress)
@@ -39,7 +39,8 @@ Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026
 - Gemini 3 rejects foreign tool-call history → `flatten_tool_history`.
 - LLMs miscount weekdays → date table in the prompt.
 - Never let the LLM confirm in the same turn it prepared; yes/no is handled in code.
-- Chrome's `scrollIntoView` returns a Promise → never return it from `useEffect`.
+- Chrome's `scrollIntoView` returns a Promise → never return it from `useEffect`; and it scrolls the whole page, so scroll the transcript box with `scrollTop` instead.
+- SQLite drops timezones → API schemas force UTC (`UtcDatetime`).
 
 ## Working rules
 - Code quality first: small modules, typed, one responsibility each, shared components over copy-paste.

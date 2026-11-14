@@ -136,6 +136,7 @@ tbody th { font-weight: 700; }
   .brand__name { display: none; }
   .brand__short { display: inline; }
   .nav { gap: 0.8rem; }
+  .hide-mobile { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

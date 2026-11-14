@@ -41,7 +41,7 @@ sequenceDiagram
     end
     AG-->>API: short spoken reply (saved to history)
     API-->>B: transcript + reply + audio URL
-    B->>API: GET /api/voice/tts/{message_id}
+    B->>API: GET /api/voice/tts/{message_id} (streamed)
     API->>TTS: Edge neural voice → Deepgram Aura
     TTS-->>B: MP3 audio, played, then it listens again
 ```
@@ -100,7 +100,7 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 With the app running:
 
 ```bash
-docker compose exec backend sh -c "ruff check app tests && pytest -q"   # 50 tests: rules, permissions, confirm flow, fallbacks, documents
+docker compose exec backend sh -c "ruff check app tests && pytest -q"   # 52 tests: rules, permissions, confirm flow, fallbacks, documents
 docker compose exec frontend sh -c "npx tsc -b && npm test"              # types + voice activity detection
 ```
 

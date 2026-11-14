@@ -1,7 +1,14 @@
-from datetime import datetime
-from typing import Any
+from datetime import UTC, datetime
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
+
+
+UtcDatetime = Annotated[datetime, AfterValidator(_as_utc)]
 
 
 class LoginIn(BaseModel):
@@ -36,15 +43,15 @@ class TurnOut(BaseModel):
 class ConversationOut(BaseModel):
     id: str
     title: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
 
 
 class MessageOut(BaseModel):
     id: int
     role: str
     content: str
-    created_at: datetime
+    created_at: UtcDatetime
 
 
 class ConversationDetailOut(ConversationOut):

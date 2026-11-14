@@ -23,7 +23,8 @@ export function AssistantPage() {
 
   const teacher = me.role === "teacher";
   const firstName = me.name?.split(" ")[0] ?? "there";
-  const details = [me.profile.programme, me.profile.department, me.profile.class_code].filter(Boolean).join(", ");
+  const programme = { UG: "B.Tech", PG: "M.Tech" }[String(me.profile.programme)] ?? me.profile.programme;
+  const details = [programme, me.profile.department, me.profile.class_code].filter(Boolean).join(", ");
 
   return (
     <div className="signed-in">

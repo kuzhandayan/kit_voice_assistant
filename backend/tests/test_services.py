@@ -134,3 +134,42 @@ def test_describe_outcome_reads_reference():
 
     text = describe_outcome({"status": "done", "result": {"request_id": 81, "status": "pending"}})
     assert text == "Done, that's submitted. Your reference number is 81. Its status is pending."
+
+
+async def _collect(stream):
+    return b"".join([chunk async for chunk in stream])
+
+
+async def test_tts_stream_uses_edge_chunks():
+    from app.core.config import Settings
+    from app.services.speech.tts import TextToSpeech
+
+    tts = TextToSpeech(Settings(), http=None)
+
+    async def edge():
+        yield b"a"
+        yield b"b"
+
+    tts._edge_chunks = lambda text: edge()
+    provider, stream = await tts.stream("hi")
+    assert provider == "edge-tts" and await _collect(stream) == b"ab"
+
+
+async def test_tts_stream_falls_back_when_edge_fails():
+    from app.core.config import Settings
+    from app.services.resilience import FallbackResult
+    from app.services.speech.tts import TextToSpeech
+
+    tts = TextToSpeech(Settings(), http=None)
+
+    async def broken():
+        raise RuntimeError("edge down")
+        yield b""
+
+    async def fallback(text):
+        return FallbackResult("deepgram-aura", b"mp3", 1)
+
+    tts._edge_chunks = lambda text: broken()
+    tts.synthesize_fallback = fallback
+    provider, stream = await tts.stream("hi")
+    assert provider == "deepgram-aura" and await _collect(stream) == b"mp3"

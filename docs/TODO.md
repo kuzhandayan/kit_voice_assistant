@@ -1,6 +1,6 @@
 # TODO
 
-Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 12:00.
+Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Last update: 12:20.
 
 ## 0. Inputs from Kuzhandayan
 - [x] College API URL, Swagger, participant key (tested 11:15)
@@ -27,18 +27,21 @@ Target: final submission by **14:00 IST** (bonus cutoff 14:15, close 14:45). Las
 
 ## 3. Voice — done
 - [x] STT chain, TTS chain, owner-scoped audio URLs, noise handling
+- [x] Real speech test: generated speech → Whisper → agent → streamed Edge voice (public + student), audio owner check 404
+- [x] TTS streams to the browser (playback starts on first chunk)
 - [ ] Real microphone test in a browser (local `docker compose up`)
 
 ## 4. Frontend — done
 - [x] Home, Login, Assistant, History; VAD recorder; hands-free; text fallback; accessibility
-- [x] Visual check (desktop + chat screenshot); fixed the newer-Chrome `scrollIntoView` crash
+- [x] Browser e2e: login → assistant → history, desktop + mobile, 0 page errors
+- [x] Fixed: newer-Chrome `scrollIntoView` crash, page jump on load, UTC times in history, B.Tech label, mobile login button
 
 ## 5. Ship 1 (→ 13:15)
 - [ ] Deploy, smoke test over https
 - [ ] Submission 1
 
 ## 6. Harden (→ 13:50)
-- [x] 50 backend tests + 5 frontend tests, ruff clean, tsc clean
+- [x] 52 backend tests + 5 frontend tests, ruff clean, tsc clean
 - [x] README: deploy steps + known limitations
 - [ ] API-level tests (FastAPI TestClient with a fake college API)
 - [ ] Act on leaderboard feedback

@@ -41,7 +41,9 @@ PENDING = "Prepared but NOT submitted yet, waiting for the user's yes or no: {su
 
 
 def upcoming_dates(today: date, days: int = 14) -> str:
-    return ", ".join(f"{d.strftime('%a')} {d.isoformat()}" for d in (today + timedelta(days=i) for i in range(1, days + 1)))
+    return ", ".join(
+        f"{d.strftime('%a')} {d.isoformat()}" for d in (today + timedelta(days=i) for i in range(1, days + 1))
+    )
 
 
 def build_system_prompt(principal: Principal, today: date, pending_summary: str | None) -> str:

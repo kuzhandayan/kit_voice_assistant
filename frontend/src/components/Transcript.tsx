@@ -8,13 +8,14 @@ interface Props {
 }
 
 export function Transcript({ messages, greeting, thinking }: Props) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "nearest" });
+    const log = logRef.current;
+    if (log) log.scrollTop = log.scrollHeight;
   }, [messages.length, thinking]);
 
   return (
-    <div className="transcript" role="log" aria-live="polite">
+    <div ref={logRef} className="transcript" role="log" aria-live="polite">
       {greeting && <p className="bubble bubble--assistant">{greeting}</p>}
       {messages.map((m) => (
         <p key={m.id} className={`bubble bubble--${m.role}`}>
@@ -29,7 +30,6 @@ export function Transcript({ messages, greeting, thinking }: Props) {
           <span />
         </p>
       )}
-      <div ref={endRef} />
     </div>
   );
 }
