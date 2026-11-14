@@ -57,31 +57,17 @@ Backend, voice, frontend done and verified live with student `arjun` / `Kit@2026
 - TTS chain: Edge TTS (free, no key) → Deepgram Aura-2 → text-only (client speaks with speechSynthesis as last resort).
 - Knowledge: PDFs parsed at startup → chunked → BM25 search (no embedding API, no extra failure point).
 - Frontend: React + Vite + TypeScript, plain CSS. MediaRecorder + silence detection.
-- Storage: Postgres (compose container locally; Supabase session pooler in production). SQLite fallback for bare `uvicorn`.
+- Storage: Postgres (compose container locally; Supabase session pooler in production).
 - Dev: `docker compose up` = backend (uvicorn --reload) + frontend (Vite HMR) + Postgres, all with hot reload. Open :5173.
-- Prod: one multi-stage `Dockerfile` (Node builds frontend, FastAPI serves it). `docker compose -f docker-compose.prod.yml up` to try it locally on :8000.
+- Prod: one multi-stage `Dockerfile` (Node builds frontend, FastAPI serves it), used only by Render.
 - Deploy: Render blueprint (`render.yaml`), one app, one URL; Supabase session pooler for `DATABASE_URL`; uptime ping on `/api/health`. Vercel split rejected (cross-site cookies, two deploys).
 
 ## Commands
 ```bash
-# backend
-cd backend && python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-pytest -q
-
-# frontend
-cd frontend && npm install && npm run dev   # proxies /api to :8000
-
-# docker, hot reload (backend + frontend + postgres) → http://localhost:5173
-docker compose up --build
-
-# production image locally → http://localhost:8000
-docker compose -f docker-compose.prod.yml up --build
-
-# checks
-cd backend && ruff check app tests && pytest -q
-cd frontend && npx tsc -b && npm test
+cp .env.example .env
+docker compose up --build                                   # http://localhost:5173, hot reload
+docker compose exec backend sh -c "ruff check app tests && pytest -q"
+docker compose exec frontend sh -c "npx tsc -b && npm test"
 ```
 
 ## Working copy / sync (Claude sessions)

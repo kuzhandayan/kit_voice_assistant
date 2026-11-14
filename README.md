@@ -43,7 +43,7 @@ sequenceDiagram
     API-->>B: transcript + reply + audio URL
     B->>API: GET /api/voice/tts/{message_id}
     API->>TTS: Edge neural voice → Deepgram Aura
-    TTS-->>B: MP3, played; then listens again (hands-free)
+    TTS-->>B: MP3 audio, played, then it listens again
 ```
 
 More detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · edge cases: [`docs/EDGE_CASES.md`](docs/EDGE_CASES.md) · college API: [`docs/COLLEGE_API.md`](docs/COLLEGE_API.md)
@@ -64,40 +64,15 @@ The browser's built-in speech recognition is **not** used; all speech-to-text ru
 
 ## Run it
 
-You need Docker, or Python 3.11+ and Node 20+. Keys: a free [Groq](https://console.groq.com) key is enough; [Gemini](https://aistudio.google.com) and [Deepgram](https://console.deepgram.com) keys switch on the fallbacks.
+You only need **Docker**. Keys: a free [Groq](https://console.groq.com) key is enough; [Gemini](https://aistudio.google.com) and [Deepgram](https://console.deepgram.com) keys switch on the fallbacks.
 
 ```bash
-git clone <repo-url> && cd kit-voice-assistant
-cp .env.example .env        # add COLLEGE_PARTICIPANT_KEY, GROQ_API_KEY (+ optional GEMINI_API_KEY, DEEPGRAM_API_KEY)
-```
-
-### Option 1: Docker with hot reload (recommended for development)
-
-```bash
+git clone https://github.com/kuzhandayan/kit_voice_assistant.git && cd kit_voice_assistant
+cp .env.example .env        # fill in COLLEGE_PARTICIPANT_KEY and GROQ_API_KEY (+ optional GEMINI_API_KEY, DEEPGRAM_API_KEY)
 docker compose up --build   # open http://localhost:5173
 ```
 
-Starts three containers: `backend` (uvicorn `--reload`, code mounted), `frontend` (Vite dev server with hot module reload) and `db` (Postgres 16). Edit any file and the change shows up immediately.
-
-### Option 2: Production image
-
-```bash
-docker compose -f docker-compose.prod.yml up --build   # open http://localhost:8000
-```
-
-One image: Node builds the frontend, FastAPI serves it and the API from the same origin.
-
-### Option 3: Without Docker
-
-```bash
-cd backend && python -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt
-uvicorn app.main:app --reload --port 8000
-
-cd frontend && npm install && npm run dev   # http://localhost:5173, /api is proxied to :8000
-```
-
-The microphone works on `localhost` and on https.
+This starts the backend (FastAPI, reloads on save), the frontend (Vite, reloads on save) and Postgres. The microphone works on `localhost` and on https.
 
 ## Configuration
 
@@ -110,7 +85,7 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 | `GROQ_API_KEY` | yes | LLM and speech-to-text |
 | `GEMINI_API_KEY`, `DEEPGRAM_API_KEY` | no | Fallback LLM, STT and TTS |
 | `LLM_CHAIN` | no | `vendor:model[@reasoning_effort]`, comma separated, tried in order |
-| `DATABASE_URL` | no | Defaults to SQLite; use the Supabase **session pooler** URL in production |
+| `DATABASE_URL` | prod only | Docker Compose uses its own Postgres; in production use the Supabase **session pooler** URL |
 | `APP_ENV` | no | `production` turns on secure cookies and turns off CORS |
 
 ## Deploy (Render, one app)
@@ -122,9 +97,11 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 
 ## Tests and checks
 
+With the app running:
+
 ```bash
-cd backend && ruff check app tests && pytest -q     # 50 tests: rules, permissions, confirm flow, fallbacks, documents
-cd frontend && npx tsc -b && npm test                # types + voice activity detection
+docker compose exec backend sh -c "ruff check app tests && pytest -q"   # 50 tests: rules, permissions, confirm flow, fallbacks, documents
+docker compose exec frontend sh -c "npx tsc -b && npm test"              # types + voice activity detection
 ```
 
 ## Project structure

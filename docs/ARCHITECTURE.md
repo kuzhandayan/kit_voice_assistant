@@ -100,7 +100,7 @@ The college system runs on its own date (`/v1/today` ≠ real date). A `CollegeC
 
 ## Local development
 - `docker compose up`: backend (uvicorn `--reload`, code mounted), frontend (Vite HMR, polling watcher for Docker on macOS), Postgres. Browser talks to Vite on :5173, which proxies `/api` to the backend, so cookies stay same-origin.
-- `docker compose -f docker-compose.prod.yml up`: the production image on :8000.
+- Production uses the root `Dockerfile` (built by Render), not Compose.
 
 ## Safety of write actions (confirmation)
 1. The LLM calls an action tool → `prepare()` validates input and handbook rules (raises `RuleViolation` with the rule number) → a `PendingAction` is stored and its summary returned.
