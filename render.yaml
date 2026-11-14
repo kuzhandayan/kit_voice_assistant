@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: kit-voice-assistant
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: COLLEGE_API_BASE_URL
+        value: https://ht.knowvally.com
+      - key: COLLEGE_PARTICIPANT_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
